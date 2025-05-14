@@ -436,16 +436,97 @@ module.exports = (_ => {
 				return false;
 			}
 
-			doCopyRaw (execute, {messageDiv, message}, action, event) {
+
+			doCopyRaw(execute, {messageDiv, message}, action, event) {
+				if (!message) return false;
+
+				let urls = [];
+
+				// Extract URLs from message content (ignoring normal text)
 				if (message.content) {
+					const urlRegex = /(https?:\/\/[^\s]+)/g;
+					const matches = message.content.match(urlRegex);
+					if (matches) urls.push(...matches);
+				}
+
+				// Extract attachment URLs
+				if (message.attachments) {
+					if (typeof message.attachments.forEach === "function") {
+						message.attachments.forEach(a => {
+							if (a?.url) urls.push(a.url);
+						});
+					} else if (Array.isArray(message.attachments)) {
+						for (let attachment of message.attachments) {
+							if (attachment?.url) urls.push(attachment.url);
+						}
+					}
+				}
+
+				if (urls.length > 0) {
+					const rawText = urls.join("\n");
 					if (execute) {
-						BDFDB.LibraryModules.WindowUtils.copy(message.content);
-						if (this.settings.toasts[action]) BDFDB.NotificationUtils.toast(this.formatToast(BDFDB.LanguageUtils.LanguageStrings.COPIED_TEXT), {type: "success"});
+						BDFDB.LibraryModules.WindowUtils.copy(rawText);
+						if (this.settings.toasts[action]) {
+							BDFDB.NotificationUtils.toast(
+								this.formatToast(BDFDB.LanguageUtils.LanguageStrings.COPIED_TEXT),
+								{type: "success"}
+							);
+						}
 					}
 					return true;
 				}
+
 				return false;
 			}
+
+			//Without text removal
+			// doCopyRaw (execute, {messageDiv, message}, action, event) {
+			// 	if (!message) return false;
+
+			// 	let rawText = message.content || "";
+
+			// 	// Normalize attachments
+			// 	let attachments = [];
+			// 	if (message.attachments) {
+			// 		if (typeof message.attachments.forEach === "function") {
+			// 			message.attachments.forEach(a => attachments.push(a));
+			// 		} else if (Array.isArray(message.attachments)) {
+			// 			attachments = message.attachments;
+			// 		}
+			// 	}
+
+			// 	// Add media URLs if present
+			// 	for (let attachment of attachments) {
+			// 		if (attachment?.url) {
+			// 			rawText += (rawText ? "\n" : "") + attachment.url;
+			// 		}
+			// 	}
+
+			// 	if (rawText) {
+			// 		if (execute) {
+			// 			BDFDB.LibraryModules.WindowUtils.copy(rawText);
+			// 			if (this.settings.toasts[action]) {
+			// 				BDFDB.NotificationUtils.toast(this.formatToast(BDFDB.LanguageUtils.LanguageStrings.COPIED_TEXT), {type: "success"});
+			// 			}
+			// 		}
+			// 		return true;
+			// 	}
+
+			// 	return false;
+			// }
+
+			// Original
+			// doCopyRaw (execute, {messageDiv, message}, action, event) {
+			// 	if (message.content) {
+			// 		if (execute) {
+			// 			BDFDB.LibraryModules.WindowUtils.copy(message.content);
+			// 			if (this.settings.toasts[action]) BDFDB.NotificationUtils.toast(this.formatToast(BDFDB.LanguageUtils.LanguageStrings.COPIED_TEXT), {type: "success"});
+			// 		}
+			// 		return true;
+			// 	}
+			// 	return false;
+			// }
+
 
 			doCopyLink (execute, {messageDiv, message}, action, event) {
 				let channel = BDFDB.LibraryStores.ChannelStore.getChannel(message.channel_id);
